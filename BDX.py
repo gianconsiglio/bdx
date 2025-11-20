@@ -10,25 +10,23 @@ data_atual = datetime.now()
 nome_pasta = data_atual.strftime("%d-%m-%Y_%H%M")
 
 # Caminhos
-arquivo_lista = "chaves.txt"
 pasta_origem = "Docs"
-pasta_destino = f"{nome_pasta} BDX"
-
-if os.path.exists(arquivo_lista) and os.path.exists(pasta_origem):
-    pass
-else:
-    messagebox.showerror(message='Verifique se a pasta ‘Docs’ ou o arquivo ‘chaves.txt’ existem na pasta onde está o executável.')
-    sys.exit()
 
 # Cria a janela principal
 janela = tk.Tk()
-janela.title("BDX 1.1")  # Título da janela
+janela.title("BDX 1.2")  # Título da janela
 janela.geometry("600x400")  # Largura x Altura
 
-
-
 # Adiciona um botão
-def iniciar():
+def buscar_xml_por_chave():
+    arquivo_lista = "chave.txt"
+
+    if os.path.exists(arquivo_lista) and os.path.exists(pasta_origem):
+        pass
+    else:
+        messagebox.showerror(message='Verifique se a pasta ‘Docs’ ou o arquivo ‘chave.txt’ existem na pasta onde está o executável.')
+        sys.exit()
+    pasta_destino = f"{nome_pasta} BDX CHAVE"
     campo_query.config(state='normal') 
     campo_query.delete("1.0",tk.END)
 
@@ -68,9 +66,57 @@ def iniciar():
 
     campo_query.config(state='disabled')     
         
+def buscar_xml_por_coo():
+    chaves=[]
+    arquivo_lista = "coo.txt"
 
-botao = tk.Button(janela, text="Buscar xml", command=iniciar, padx=20, pady=20,fg='white',bg='green')
+    if os.path.exists(arquivo_lista) and os.path.exists(pasta_origem):
+        pass
+    else:
+        messagebox.showerror(message='Verifique se a pasta ‘Docs’ ou o arquivo coo.txt’ existem na pasta onde está o executável.')
+        sys.exit()
+    campo_query.config(state='normal') 
+    campo_query.delete("1.0",tk.END)
+    pasta_destino = f"{nome_pasta} BDX COO"
+    campo_query.delete("1.0",tk.END)
+    with open(arquivo_lista, "r", encoding="utf-8") as f:
+          for linha in f:
+              linha = linha.strip()
+              linha = linha.lower()
+              chaves.append(linha.lower())  
+    encontrados = set()
+    for raiz, dirs, arquivos in os.walk(pasta_origem):
+        for nome_arquivo in arquivos:
+            if nome_arquivo[-8:] == '-nfe.xml':
+                nome_lower = nome_arquivo.lower()
+                for chave in chaves:
+                    if str(chave).lstrip("0") == nome_lower[25:34].lstrip("0"):
+                        # Cria a pasta de destino se não existir
+                        os.makedirs(pasta_destino, exist_ok=True)
+                        caminho_origem = os.path.join(raiz, nome_arquivo)
+                        caminho_destino = os.path.join(pasta_destino, nome_arquivo)
+                        shutil.copy2(caminho_origem, caminho_destino)
+                        encontrados.add(chave)
+                        campo_query.insert(tk.END, f"✅ Copiado: {nome_arquivo}\n")
+                        break  # evita copiar o mesmo arquivo mais de uma vez
+                    else:
+                        pass
+            else:
+                pass  
+    # Mostra os que não foram encontrados
+    nao_encontrados = [c for c in chaves if c not in encontrados]
+    if nao_encontrados:
+        campo_query.insert(tk.END,"\n⚠️ Arquivos não encontrados:\n")
+        for c in nao_encontrados:
+            campo_query.insert(tk.END,f"{c}\n")
+    else:
+        campo_query.insert(tk.END,"\n🟢 Todos os arquivos foram encontrados e copiados!")
+    campo_query.config(state='disabled')                   
+           
+botao = tk.Button(janela, text="Buscar xml por chave", command=buscar_xml_por_chave, padx=20, pady=20,fg='white',bg='green')
 botao.pack(pady=10)
+botao2 = tk.Button(janela, text="Buscar xml por coo", command=buscar_xml_por_coo, padx=20, pady=20,fg='white',bg='green')
+botao2.pack(pady=10)
 
 campo_query = tk.Text(janela, width=80, height=15,bg="lightblue",fg="white",state='disabled')
 campo_query.pack(pady=5)
