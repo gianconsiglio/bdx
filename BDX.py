@@ -34,7 +34,7 @@ def load_pfx(pfx_path, password):
 
         return "cert.pem", "key.pem"  
     except Exception as erro:
-        janela2.after(0,lambda: messagebox("Erro",'Houve um problema para carregar seu certificado!'))
+        janela2.after(0,lambda e=erro: messagebox.showerror(f"Erro de certificado",{str(e)}))
         return None,None
 
 
@@ -98,7 +98,7 @@ def extrair_prot(xml_retorno):
 def janela():
     global campo_query, janela_principal
     janela_principal = tk.Tk()
-    janela_principal.title("BDX 1.7")  # Título da janela
+    janela_principal.title("BDX 1.8")  # Título da janela
     janela_principal.geometry("600x600")  # Largura x Altura
     
     botao = tk.Button(janela_principal, text="Buscar xml por chave", command=buscar_xml_por_chave, padx=20, pady=20,fg='white',bg='green')
@@ -209,18 +209,20 @@ def buscar_xml_por_coo():
 
 def validar_xml(pasta,certificado,senha):
     if not os.path.exists(pasta):
-        janela2.after(0,lambda: messagebox.showerror("Erro", "Caminho do xml não encontrado!"))       
+        janela2.after(0,lambda: messagebox.showerror("Erro", "Caminho do xml não encontrado!"))  
+        return     
 
     elif not os.path.exists(certificado):
         janela2.after(0,lambda: messagebox.showerror("Erro", "Caminho do certificado não encontrado!"))  
-
-              
-    certificado = str(certificado).strip()
-    senha = str(senha).strip()
-    CERT_FILE, KEY_FILE = load_pfx(certificado, senha)
-
-    if CERT_FILE is None or KEY_FILE is None:
         return
+
+    else:
+        certificado = str(certificado).strip()
+        senha = str(senha).strip()
+        CERT_FILE, KEY_FILE = load_pfx(certificado, senha)
+
+        if CERT_FILE is None or KEY_FILE is None:
+            return
 
     qtd_itens = 0
     qtd_itens_validos = 0         
@@ -281,7 +283,7 @@ def janela_nova():
     global campo_query1
     janela_principal.withdraw()
     janela2 = tk.Toplevel()
-    janela2.title("BDX 1.7")
+    janela2.title("BDX 1.8")
     janela2.geometry("1000x800")
 
     label_pasta = tk.Label(janela2, text="Caminho do XML:")
