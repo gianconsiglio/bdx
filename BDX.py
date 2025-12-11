@@ -3,8 +3,6 @@ import shutil
 from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
-import sys
-from tkinter import filedialog
 import requests
 from OpenSSL import crypto
 import xml.etree.ElementTree as ET
@@ -14,10 +12,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 import threading
 import time
 
-
 data_atual = datetime.now()
 nome_pasta = data_atual.strftime("%d-%m-%Y_%H%M")
-pasta_origem = "Docs"
+pasta_origem = 'docs'
 
 
 def load_pfx(pfx_path, password):
@@ -27,10 +24,8 @@ def load_pfx(pfx_path, password):
     p12 = crypto.load_pkcs12(pfx, password.encode())
     private_key = crypto.dump_privatekey(crypto.FILETYPE_PEM, p12.get_privatekey())
     certificate = crypto.dump_certificate(crypto.FILETYPE_PEM, p12.get_certificate())
-
     open("cert.pem", "wb").write(certificate)
     open("key.pem", "wb").write(private_key)
-
     return "cert.pem", "key.pem"
 
 
@@ -93,11 +88,10 @@ def extrair_prot(xml_retorno):
 
 
 
-
 def janela():
     global campo_query, janela_principal
     janela_principal = tk.Tk()
-    janela_principal.title("BDX 1.3")  # Título da janela
+    janela_principal.title("BDX 1.4")  # Título da janela
     janela_principal.geometry("600x600")  # Largura x Altura
     
     botao = tk.Button(janela_principal, text="Buscar xml por chave", command=buscar_xml_por_chave, padx=20, pady=20,fg='white',bg='green')
@@ -112,32 +106,27 @@ def janela():
     janela_principal.mainloop()
 
 
-# Adiciona um botão
 def buscar_xml_por_chave():
     arquivo_lista = "chave.txt"
 
     if os.path.exists(arquivo_lista) and os.path.exists(pasta_origem):
-        pass
-    else:
-        messagebox.showerror(message='Verifique se a pasta ‘Docs’ ou o arquivo ‘chave.txt’ existem na pasta onde está o executável.')
-        sys.exit()
-    pasta_destino = f"{nome_pasta} BDX CHAVE"
-    campo_query.config(state='normal') 
-    campo_query.delete("1.0",tk.END)
+        pasta_destino = f"{nome_pasta} BDX CHAVE"
+        campo_query.config(state='normal') 
+        campo_query.delete("1.0",tk.END)
 
-    # Lê a lista de chaves (sem extensão, sem -nfe)
-    chaves = []
-    with open(arquivo_lista, "r", encoding="utf-8") as f:
+        # Lê a lista de chaves (sem extensão, sem -nfe)
+        chaves = []
+        with open(arquivo_lista, "r", encoding="utf-8") as f:
           for linha in f:
               linha = linha.strip()
               linha = linha.lower()
               linha = linha + '-nfe.xml'
               chaves.append(linha.lower())  
-    encontrados = set()
-    # Percorre a pasta e subpastas
-    for raiz, dirs, arquivos in os.walk(pasta_origem):
-        for nome_arquivo in arquivos:
-            nome_lower = nome_arquivo.lower()
+        encontrados = set()
+        # Percorre a pasta e subpastas
+        for raiz, dirs, arquivos in os.walk(pasta_origem):
+            for nome_arquivo in arquivos:
+                nome_lower = nome_arquivo.lower()
             # Verifica se alguma chave aparece dentro do nome do arquivo
             for chave in chaves:
                  if chave == nome_lower:
@@ -150,63 +139,66 @@ def buscar_xml_por_chave():
                     campo_query.insert(tk.END, f"✅ Copiado: {nome_arquivo}\n")
                     break  # evita copiar o mesmo arquivo mais de uma vez
 
-    # Mostra os que não foram encontrados
-    nao_encontrados = [c for c in chaves if c not in encontrados]
-    if nao_encontrados:
-        campo_query.insert(tk.END,"\n⚠️ Arquivos não encontrados:\n")
-        for c in nao_encontrados:
-            campo_query.insert(tk.END,f"{c}\n")
-    else:
-        campo_query.insert(tk.END,"\n🟢 Todos os arquivos foram encontrados e copiados!")
+        # Mostra os que não foram encontrados
+        nao_encontrados = [c for c in chaves if c not in encontrados]
+        if nao_encontrados:
+            campo_query.insert(tk.END,"\n⚠️ Arquivos não encontrados:\n")
+            for c in nao_encontrados:
+                campo_query.insert(tk.END,f"{c}\n")
+        else:
+            campo_query.insert(tk.END,"\n🟢 Todos os arquivos foram encontrados e copiados!")
 
-    campo_query.config(state='disabled')     
-        
+        campo_query.config(state='disabled')     
+    else:
+        messagebox.showerror(message='Verifique se a pasta ‘Docs’ ou o arquivo ‘chave.txt’ existem na pasta onde está o executável.')
+    
+
 def buscar_xml_por_coo():
     chaves=[]
     arquivo_lista = "coo.txt"
 
     if os.path.exists(arquivo_lista) and os.path.exists(pasta_origem):
-        pass
-    else:
-        messagebox.showerror(message='Verifique se a pasta ‘Docs’ ou o arquivo coo.txt’ existem na pasta onde está o executável.')
-        sys.exit()
-    campo_query.config(state='normal') 
-    campo_query.delete("1.0",tk.END)
-    pasta_destino = f"{nome_pasta} BDX COO"
-    campo_query.delete("1.0",tk.END)
-    with open(arquivo_lista, "r", encoding="utf-8") as f:
+        campo_query.config(state='normal') 
+        campo_query.delete("1.0",tk.END)
+        pasta_destino = f"{nome_pasta} BDX COO"
+        campo_query.delete("1.0",tk.END)
+        with open(arquivo_lista, "r", encoding="utf-8") as f:
           for linha in f:
               linha = linha.strip()
               linha = linha.lower()
               chaves.append(linha.lower())  
-    encontrados = set()
-    for raiz, dirs, arquivos in os.walk(pasta_origem):
-        for nome_arquivo in arquivos:
-            if nome_arquivo[-8:] == '-nfe.xml':
-                nome_lower = nome_arquivo.lower()
-                for chave in chaves:
-                    if str(chave).lstrip("0") == nome_lower[25:34].lstrip("0"):
-                        # Cria a pasta de destino se não existir
-                        os.makedirs(pasta_destino, exist_ok=True)
-                        caminho_origem = os.path.join(raiz, nome_arquivo)
-                        caminho_destino = os.path.join(pasta_destino, nome_arquivo)
-                        shutil.copy2(caminho_origem, caminho_destino)
-                        encontrados.add(chave)
-                        campo_query.insert(tk.END, f"✅ Copiado: {nome_arquivo}\n")
-                        break  # evita copiar o mesmo arquivo mais de uma vez
-                    else:
-                        pass
-            else:
-                pass  
-    # Mostra os que não foram encontrados
-    nao_encontrados = [c for c in chaves if c not in encontrados]
-    if nao_encontrados:
-        campo_query.insert(tk.END,"\n⚠️ Arquivos não encontrados:\n")
-        for c in nao_encontrados:
-            campo_query.insert(tk.END,f"{c}\n")
+        encontrados = set()
+        for raiz, dirs, arquivos in os.walk(pasta_origem):
+            for nome_arquivo in arquivos:
+                if nome_arquivo[-8:] == '-nfe.xml':
+                    nome_lower = nome_arquivo.lower()
+                    for chave in chaves:
+                        if str(chave).lstrip("0") == nome_lower[25:34].lstrip("0"):
+                            # Cria a pasta de destino se não existir
+                            os.makedirs(pasta_destino, exist_ok=True)
+                            caminho_origem = os.path.join(raiz, nome_arquivo)
+                            caminho_destino = os.path.join(pasta_destino, nome_arquivo)
+                            shutil.copy2(caminho_origem, caminho_destino)
+                            encontrados.add(chave)
+                            campo_query.insert(tk.END, f"✅ Copiado: {nome_arquivo}\n")
+                            break  # evita copiar o mesmo arquivo mais de uma vez
+                        else:
+                            pass
+                else:
+                    pass  
+        # Mostra os que não foram encontrados
+        nao_encontrados = [c for c in chaves if c not in encontrados]
+        if nao_encontrados:
+            campo_query.insert(tk.END,"\n⚠️ Arquivos não encontrados:\n")
+            for c in nao_encontrados:
+                campo_query.insert(tk.END,f"{c}\n")
+        else:
+            campo_query.insert(tk.END,"\n🟢 Todos os arquivos foram encontrados e copiados!")
+            campo_query.config(state='disabled')     
+        
     else:
-        campo_query.insert(tk.END,"\n🟢 Todos os arquivos foram encontrados e copiados!")
-    campo_query.config(state='disabled')     
+        messagebox.showerror(message='Verifique se a pasta ‘Docs’ ou o arquivo coo.txt’ existem na pasta onde está o executável.')
+
 
 def validar_xml(pasta,certificado,senha):
     if os.path.exists(pasta) and os.path.exists(certificado):
@@ -233,7 +225,7 @@ def validar_xml(pasta,certificado,senha):
                     campo_query1.after(0, lambda: campo_query1.insert(tk.END, "\n" + "*"*30 + "\n"))
 
                     if ret:  # XML encontrado via SEFAZ
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,'XML ENCONTRADO!\n'))
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,'🟢 XML ENCONTRADO! 🟢\n'))
                         campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"COO: {chave}\n"))
                         campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"CHAVE: {nome_arquivo}\n"))
                         campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"cStat: {ret.get('cStat')}\n"))
@@ -250,7 +242,7 @@ def validar_xml(pasta,certificado,senha):
                         tipo = ide.findtext("nfe:tpEmis", default=None, namespaces=ns) if ide is not None else None
 
                         os.remove(arquivo_xml)
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,'XML NAO ENCONTRADO!\n'))
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,'⚠️ XML NAO ENCONTRADO! ⚠️\n'))
                         campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"COO: {chave}\n"))
                         campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"CHAVE: {nome_arquivo}\n"))
 
@@ -258,9 +250,7 @@ def validar_xml(pasta,certificado,senha):
                     campo_query1.after(0, campo_query1.update_idletasks)
                     campo_query1.see(tk.END)
                     time.sleep(0.5)
-                    
-
-
+                
     else:  
         janela2.after(
             0,
@@ -268,13 +258,12 @@ def validar_xml(pasta,certificado,senha):
         )
 
        
-
 def janela_nova():
     global janela2
     global campo_query1
     janela_principal.withdraw()
     janela2 = tk.Toplevel()
-    janela2.title("BDX 1.3")
+    janela2.title("BDX 1.4")
     janela2.geometry("1000x800")
 
     label_pasta = tk.Label(janela2, text="Caminho da pasta dos XMLs:")
@@ -303,7 +292,8 @@ def janela_nova():
 
 def validar_xml_thread(pasta,certificado,senha):
     threading.Thread(target=validar_xml,args=(pasta,certificado,senha)).start()
-                 
+
+
 def voltar():
     janela2.withdraw()
     janela_principal.deiconify()
