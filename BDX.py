@@ -98,7 +98,7 @@ def extrair_prot(xml_retorno):
 def janela():
     global campo_query, janela_principal
     janela_principal = tk.Tk()
-    janela_principal.title("BDX 1.6")  # Título da janela
+    janela_principal.title("BDX 1.7")  # Título da janela
     janela_principal.geometry("600x600")  # Largura x Altura
     
     botao = tk.Button(janela_principal, text="Buscar xml por chave", command=buscar_xml_por_chave, padx=20, pady=20,fg='white',bg='green')
@@ -221,10 +221,13 @@ def validar_xml(pasta,certificado,senha):
 
     if CERT_FILE is None or KEY_FILE is None:
         return
-             
+
+    qtd_itens = 0
+    qtd_itens_validos = 0         
     for raiz, dirs, arquivos in os.walk(pasta):
             for nome_arquivo in arquivos:
                 if nome_arquivo.endswith('-nfe.xml'):
+                    qtd_itens+=1
                     chave = nome_arquivo[25:34].lstrip("0")
                     chave_modificada = nome_arquivo.removesuffix('-nfe.xml')
                     xml_nfe = limpar(xml_consulta(chave_modificada))
@@ -242,8 +245,10 @@ def validar_xml(pasta,certificado,senha):
                     campo_query1.tag_config("verde", foreground="green")
                     campo_query1.tag_config("vermelho", foreground="red")
                     campo_query1.tag_config("azul", foreground="blue")
+                    campo_query1.tag_config("preto", foreground="black")
 
                     if ret:  # XML encontrado via SEFAZ
+                        qtd_itens_validos +=1
                         campo_query1.after(0, lambda: campo_query1.insert(tk.END,'🟢 XML ENCONTRADO! 🟢\n','verde'))
                         campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"COO: {chave}\n",'verde'))
                         campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"CHAVE: {nome_arquivo}\n",'verde'))
@@ -261,17 +266,22 @@ def validar_xml(pasta,certificado,senha):
                         except:
                             campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"OBS: XML NÃO ENCONTRADO DENTRO DA PASTA\n",'azul'))
 
-                    campo_query1.after(0, lambda: campo_query1.insert(tk.END, "\n" + "*"*30 + "\n"))    
                     time.sleep(1)
+    
 
-                
+    campo_query1.after(0, lambda: campo_query1.insert(tk.END, "\n" + "*"*30 + "\n",'preto'))  
+    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML: {qtd_itens}'+"\n",'preto'))    
+    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML VÁLIDO: {qtd_itens_validos}'+"\n",'preto'))    
+    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML INVÁLIDO: {qtd_itens - qtd_itens_validos}'+"\n",'preto'))    
+
+
        
 def janela_nova():
     global janela2
     global campo_query1
     janela_principal.withdraw()
     janela2 = tk.Toplevel()
-    janela2.title("BDX 1.6")
+    janela2.title("BDX 1.7")
     janela2.geometry("1000x800")
 
     label_pasta = tk.Label(janela2, text="Caminho do XML:")
