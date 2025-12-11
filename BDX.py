@@ -18,20 +18,25 @@ pasta_origem = 'docs'
 
 def load_pfx(pfx_path, password):
     """Carrega certificado PFX e retorna caminhos do PEM."""
-    with open(pfx_path, "rb") as f:
+    try:
+        with open(pfx_path, "rb") as f:
             pfx_data = f.read()
-    private_key,certificate,additional_certs = pkcs12.load_key_and_certificates(pfx_data, password.encode())
-    cert_pem = certificate.public_bytes(Encoding.PEM)
+        private_key,certificate,additional_certs = pkcs12.load_key_and_certificates(pfx_data, password.encode())
+        cert_pem = certificate.public_bytes(Encoding.PEM)
 
-    with open("cert.pem","wb") as f:
-        f.write(cert_pem)
+        with open("cert.pem","wb") as f:
+            f.write(cert_pem)
 
-    key_pem = private_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8,NoEncryption())
+        key_pem = private_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8,NoEncryption())
 
-    with open("key.pem","wb") as f:
-        f.write(key_pem)
+        with open("key.pem","wb") as f:
+            f.write(key_pem)
 
-    return "cert.pem", "key.pem"    
+        return "cert.pem", "key.pem"  
+    except Exception as erro:
+        janela2.after(0,lambda: messagebox("Erro",'Houve um problema para carregar seu certificado!'))
+        return None,None
+
 
 
 def limpar(xml):
@@ -83,19 +88,17 @@ def extrair_prot(xml_retorno):
     if prot is None:
         return None
 
-    tpEmis = prot.find("nfe:tpEmis", ns)
     return {
         "cStat": prot.find("nfe:cStat", ns).text if prot.find("nfe:cStat", ns) is not None else None,
         "xMotivo": prot.find("nfe:xMotivo", ns).text if prot.find("nfe:xMotivo", ns) is not None else None,
         "nProt": prot.find("nfe:nProt", ns).text if prot.find("nfe:nProt", ns) is not None else None,
-        "tpEmis": tpEmis.text if tpEmis is not None else None
     }
 
 
 def janela():
     global campo_query, janela_principal
     janela_principal = tk.Tk()
-    janela_principal.title("BDX 1.5")  # Título da janela
+    janela_principal.title("BDX 1.6")  # Título da janela
     janela_principal.geometry("600x600")  # Largura x Altura
     
     botao = tk.Button(janela_principal, text="Buscar xml por chave", command=buscar_xml_por_chave, padx=20, pady=20,fg='white',bg='green')
@@ -205,12 +208,21 @@ def buscar_xml_por_coo():
 
 
 def validar_xml(pasta,certificado,senha):
-    if os.path.exists(pasta) and os.path.exists(certificado):
-        certificado = str(certificado).strip()
-        senha = str(senha).strip()
-        CERT_FILE, KEY_FILE = load_pfx(certificado, senha)
+    if not os.path.exists(pasta):
+        janela2.after(0,lambda: messagebox.showerror("Erro", "Caminho do xml não encontrado!"))       
+
+    elif not os.path.exists(certificado):
+        janela2.after(0,lambda: messagebox.showerror("Erro", "Caminho do certificado não encontrado!"))  
+
+              
+    certificado = str(certificado).strip()
+    senha = str(senha).strip()
+    CERT_FILE, KEY_FILE = load_pfx(certificado, senha)
+
+    if CERT_FILE is None or KEY_FILE is None:
+        return
              
-        for raiz, dirs, arquivos in os.walk(pasta):
+    for raiz, dirs, arquivos in os.walk(pasta):
             for nome_arquivo in arquivos:
                 if nome_arquivo.endswith('-nfe.xml'):
                     chave = nome_arquivo[25:34].lstrip("0")
@@ -227,50 +239,42 @@ def validar_xml(pasta,certificado,senha):
                     ret = extrair_prot(response.text)
 
                     campo_query1.after(0, lambda: campo_query1.insert(tk.END, "\n" + "*"*30 + "\n"))
+                    campo_query1.tag_config("verde", foreground="green")
+                    campo_query1.tag_config("vermelho", foreground="red")
+                    campo_query1.tag_config("azul", foreground="blue")
 
                     if ret:  # XML encontrado via SEFAZ
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,'🟢 XML ENCONTRADO! 🟢\n'))
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"COO: {chave}\n"))
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"CHAVE: {nome_arquivo}\n"))
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"cStat: {ret.get('cStat')}\n"))
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"Motivo: {ret.get('xMotivo')}\n"))
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"Protocolo: {ret.get('nProt')}\n"))
-                        tipo = ret.get("tpEmis")
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,'🟢 XML ENCONTRADO! 🟢\n','verde'))
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"COO: {chave}\n",'verde'))
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"CHAVE: {nome_arquivo}\n",'verde'))
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"cStat: {ret.get('cStat')}\n",'verde'))
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"Motivo: {ret.get('xMotivo')}\n",'verde'))
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"Protocolo: {ret.get('nProt')}\n",'verde'))
+
                     else:
                         arquivo_xml = os.path.join(raiz, nome_arquivo)
-                        tree = ET.parse(arquivo_xml)
-                        root = tree.getroot()
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,'⚠️ XML NAO ENCONTRADO! ⚠️\n','vermelho'))
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"COO: {chave}\n",'vermelho'))
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"CHAVE: {nome_arquivo}\n",'vermelho'))
+                        try:
+                            os.remove(arquivo_xml)
+                        except:
+                            campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"OBS: XML NÃO ENCONTRADO DENTRO DA PASTA\n",'azul'))
 
-                        ns = {"nfe": "http://www.portalfiscal.inf.br/nfe"}
-                        ide = root.find(".//nfe:ide", ns)
-                        tipo = ide.findtext("nfe:tpEmis", default=None, namespaces=ns) if ide is not None else None
+                    campo_query1.after(0, lambda: campo_query1.insert(tk.END, "\n" + "*"*30 + "\n"))    
+                    time.sleep(1)
 
-                        os.remove(arquivo_xml)
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,'⚠️ XML NAO ENCONTRADO! ⚠️\n'))
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"COO: {chave}\n"))
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"CHAVE: {nome_arquivo}\n"))
-
-                    campo_query1.after(0, lambda tipo=tipo: campo_query1.insert(tk.END, f"Tipo de emissão (tpEmis): {tipo}\n" + "*"*30 + "\n"))
-                    campo_query1.after(0, campo_query1.update_idletasks)
-                    campo_query1.see(tk.END)
-                    time.sleep(0.5)
                 
-    else:  
-        janela2.after(
-            0,
-            lambda: messagebox.showerror("Erro", "Verifique suas configurações novamente!")
-        )
-
        
 def janela_nova():
     global janela2
     global campo_query1
     janela_principal.withdraw()
     janela2 = tk.Toplevel()
-    janela2.title("BDX 1.5")
+    janela2.title("BDX 1.6")
     janela2.geometry("1000x800")
 
-    label_pasta = tk.Label(janela2, text="Caminho da pasta dos XMLs:")
+    label_pasta = tk.Label(janela2, text="Caminho do XML:")
     label_pasta.pack(pady=5)
     entry_pasta = tk.Entry(janela2, width=50)
     entry_pasta.pack(pady=5) 
