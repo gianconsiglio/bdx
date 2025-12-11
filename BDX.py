@@ -6,11 +6,10 @@ from tkinter import messagebox
 import requests
 from OpenSSL import crypto
 import xml.etree.ElementTree as ET
-import urllib3
 import os
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 import threading
 import time
+from cryptography.hazmat.primitives.serialization import pkcs12, Encoding, PrivateFormat, NoEncryption
 
 data_atual = datetime.now()
 nome_pasta = data_atual.strftime("%d-%m-%Y_%H%M")
@@ -20,13 +19,19 @@ pasta_origem = 'docs'
 def load_pfx(pfx_path, password):
     """Carrega certificado PFX e retorna caminhos do PEM."""
     with open(pfx_path, "rb") as f:
-            pfx = f.read()
-    p12 = crypto.load_pkcs12(pfx, password.encode())
-    private_key = crypto.dump_privatekey(crypto.FILETYPE_PEM, p12.get_privatekey())
-    certificate = crypto.dump_certificate(crypto.FILETYPE_PEM, p12.get_certificate())
-    open("cert.pem", "wb").write(certificate)
-    open("key.pem", "wb").write(private_key)
-    return "cert.pem", "key.pem"
+            pfx_data = f.read()
+    private_key,certificate,additional_certs = pkcs12.load_key_and_certificates(pfx_data, password.encode())
+    cert_pem = certificate.public_bytes(Encoding.PEM)
+
+    with open("cert.pem","wb") as f:
+        f.write(cert_pem)
+
+    key_pem = private_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8,NoEncryption())
+
+    with open("key.pem","wb") as f:
+        f.write(key_pem)
+
+    return "cert.pem", "key.pem"    
 
 
 def limpar(xml):
@@ -87,11 +92,10 @@ def extrair_prot(xml_retorno):
     }
 
 
-
 def janela():
     global campo_query, janela_principal
     janela_principal = tk.Tk()
-    janela_principal.title("BDX 1.4")  # Título da janela
+    janela_principal.title("BDX 1.5")  # Título da janela
     janela_principal.geometry("600x600")  # Largura x Altura
     
     botao = tk.Button(janela_principal, text="Buscar xml por chave", command=buscar_xml_por_chave, padx=20, pady=20,fg='white',bg='green')
@@ -263,7 +267,7 @@ def janela_nova():
     global campo_query1
     janela_principal.withdraw()
     janela2 = tk.Toplevel()
-    janela2.title("BDX 1.4")
+    janela2.title("BDX 1.5")
     janela2.geometry("1000x800")
 
     label_pasta = tk.Label(janela2, text="Caminho da pasta dos XMLs:")
