@@ -4,7 +4,6 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 import requests
-from OpenSSL import crypto
 import xml.etree.ElementTree as ET
 import os
 import threading
@@ -98,7 +97,7 @@ def extrair_prot(xml_retorno):
 def janela():
     global campo_query, janela_principal
     janela_principal = tk.Tk()
-    janela_principal.title("BDX 1.8")  # Título da janela
+    janela_principal.title("BDX 1.9")  # Título da janela
     janela_principal.geometry("600x600")  # Largura x Altura
     
     botao = tk.Button(janela_principal, text="Buscar xml por chave", command=buscar_xml_por_chave, padx=20, pady=20,fg='white',bg='green')
@@ -283,7 +282,7 @@ def janela_nova():
     global campo_query1
     janela_principal.withdraw()
     janela2 = tk.Toplevel()
-    janela2.title("BDX 1.8")
+    janela2.title("BDX 1.9")
     janela2.geometry("1000x800")
 
     label_pasta = tk.Label(janela2, text="Caminho do XML:")
