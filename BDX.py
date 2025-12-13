@@ -9,9 +9,15 @@ import os
 import threading
 import time
 from cryptography.hazmat.primitives.serialization import pkcs12, Encoding, PrivateFormat, NoEncryption
+from tkinter import filedialog
+
+COR_FUNDO = "#1e1e2e"
+COR_FRAME = "#2a2a3d"
+COR_TEXTO = "#eaeaf0"   
+COR_BOTAO = "#3b82f6" 
 
 data_atual = datetime.now()
-nome_pasta = data_atual.strftime("%d-%m-%Y_%H%M")
+nome_pasta = data_atual.strftime("%Y-%m-%d_%H%M")
 pasta_origem = 'docs'
 
 
@@ -35,7 +41,6 @@ def load_pfx(pfx_path, password):
     except Exception as erro:
         janela2.after(0,lambda e=erro: messagebox.showerror(f"Erro de certificado",{str(e)}))
         return None,None
-
 
 
 def limpar(xml):
@@ -97,17 +102,18 @@ def extrair_prot(xml_retorno):
 def janela():
     global campo_query, janela_principal
     janela_principal = tk.Tk()
-    janela_principal.title("BDX 1.9")  # Título da janela
+    janela_principal.title("BDX 2.0")  # Título da janela
     janela_principal.geometry("600x600")  # Largura x Altura
+    janela_principal.configure(bg=COR_FUNDO)
     
-    botao = tk.Button(janela_principal, text="Buscar xml por chave", command=buscar_xml_por_chave, padx=20, pady=20,fg='white',bg='green')
+    botao = tk.Button(janela_principal, text="Buscar xml por chave", command=buscar_xml_por_chave, padx=20, pady=20,fg=COR_TEXTO,bg=COR_BOTAO)
     botao.pack(pady=10)
-    botao2 = tk.Button(janela_principal, text="Buscar xml por coo", command=buscar_xml_por_coo, padx=20, pady=20,fg='white',bg='green')
+    botao2 = tk.Button(janela_principal, text="Buscar xml por coo", command=buscar_xml_por_coo, padx=20, pady=20,fg=COR_TEXTO,bg=COR_BOTAO)
     botao2.pack(pady=10)
-    botao3 = tk.Button(janela_principal, text="Validação de xml", command=janela_nova, padx=20, pady=20,fg='white',bg='blue')
+    botao3 = tk.Button(janela_principal, text="Validação de xml", command=janela_nova, padx=20, pady=20,fg=COR_TEXTO,bg=COR_BOTAO)
     botao3.pack(pady=10)
 
-    campo_query = tk.Text(janela_principal, width=120, height=100,bg="lightblue",fg="white",state='disabled')
+    campo_query = tk.Text(janela_principal, width=120, height=100,bg=COR_FRAME,fg="white",state='disabled')
     campo_query.pack(pady=5)
     janela_principal.mainloop()
 
@@ -116,7 +122,7 @@ def buscar_xml_por_chave():
     arquivo_lista = "chave.txt"
 
     if os.path.exists(arquivo_lista) and os.path.exists(pasta_origem):
-        pasta_destino = f"{nome_pasta} BDX CHAVE"
+        pasta_destino = f"{nome_pasta}_BDX_CHAVE"
         campo_query.config(state='normal') 
         campo_query.delete("1.0",tk.END)
 
@@ -126,24 +132,22 @@ def buscar_xml_por_chave():
           for linha in f:
               linha = linha.strip()
               linha = linha.lower()
-              linha = linha + '-nfe.xml'
               chaves.append(linha.lower())  
         encontrados = set()
         # Percorre a pasta e subpastas
         for raiz, dirs, arquivos in os.walk(pasta_origem):
             for nome_arquivo in arquivos:
                 nome_lower = nome_arquivo.lower()
-            # Verifica se alguma chave aparece dentro do nome do arquivo
-            for chave in chaves:
-                 if chave == nome_lower:
-                    # Cria a pasta de destino se não existir
-                    os.makedirs(pasta_destino, exist_ok=True)
-                    caminho_origem = os.path.join(raiz, nome_arquivo)
-                    caminho_destino = os.path.join(pasta_destino, nome_arquivo)
-                    shutil.copy2(caminho_origem, caminho_destino)
-                    encontrados.add(chave)
-                    campo_query.insert(tk.END, f"✅ Copiado: {nome_arquivo}\n")
-                    break  # evita copiar o mesmo arquivo mais de uma vez
+                for chave in chaves:
+                    chave_modificada = chave + '-nfe.xml'
+                    if chave_modificada == nome_lower:
+                        os.makedirs(pasta_destino, exist_ok=True)
+                        caminho_origem = os.path.join(raiz, nome_arquivo)
+                        caminho_destino = os.path.join(pasta_destino, nome_arquivo)
+                        shutil.copy2(caminho_origem, caminho_destino)
+                        encontrados.add(chave)
+                        campo_query.insert(tk.END, f"✅ Copiado: {nome_arquivo}\n")
+                        break  # evita copiar o mesmo arquivo mais de uma vez
 
         # Mostra os que não foram encontrados
         nao_encontrados = [c for c in chaves if c not in encontrados]
@@ -155,6 +159,7 @@ def buscar_xml_por_chave():
             campo_query.insert(tk.END,"\n🟢 Todos os arquivos foram encontrados e copiados!")
 
         campo_query.config(state='disabled')     
+        campo_query.see(tk.END)
     else:
         messagebox.showerror(message='Verifique se a pasta ‘Docs’ ou o arquivo ‘chave.txt’ existem na pasta onde está o executável.')
     
@@ -166,7 +171,7 @@ def buscar_xml_por_coo():
     if os.path.exists(arquivo_lista) and os.path.exists(pasta_origem):
         campo_query.config(state='normal') 
         campo_query.delete("1.0",tk.END)
-        pasta_destino = f"{nome_pasta} BDX COO"
+        pasta_destino = f"{nome_pasta}_BDX_COO"
         campo_query.delete("1.0",tk.END)
         with open(arquivo_lista, "r", encoding="utf-8") as f:
           for linha in f:
@@ -200,7 +205,9 @@ def buscar_xml_por_coo():
                 campo_query.insert(tk.END,f"{c}\n")
         else:
             campo_query.insert(tk.END,"\n🟢 Todos os arquivos foram encontrados e copiados!")
-            campo_query.config(state='disabled')     
+            
+        campo_query.config(state='disabled') 
+        campo_query.see(tk.END)    
         
     else:
         messagebox.showerror(message='Verifique se a pasta ‘Docs’ ou o arquivo coo.txt’ existem na pasta onde está o executável.')
@@ -222,7 +229,9 @@ def validar_xml(pasta,certificado,senha):
 
         if CERT_FILE is None or KEY_FILE is None:
             return
-
+    botao_voltar.config(state="disabled")
+    botao_validar_xml.config(state="disabled")
+    campo_query1.config(state="normal")
     qtd_itens = 0
     qtd_itens_validos = 0         
     for raiz, dirs, arquivos in os.walk(pasta):
@@ -235,78 +244,110 @@ def validar_xml(pasta,certificado,senha):
                     soap_xml = montar_soap(xml_nfe)
                     url = "https://nfce.fazenda.sp.gov.br/ws/NFeConsultaProtocolo4.asmx"
                     headers = {"Content-Type": "application/soap+xml; charset=utf-8"}
+                    
 
-                    response = requests.post(
-                        url, data=soap_xml.encode("utf-8"), headers=headers, cert=(CERT_FILE, KEY_FILE), verify=False
-                    )
+                    try:
+                        response = requests.post(
+                        url, data=soap_xml.encode("utf-8"), headers=headers, cert=(CERT_FILE, KEY_FILE), verify=False, timeout=(5,15))
 
-                    ret = extrair_prot(response.text)
-
-                    campo_query1.after(0, lambda: campo_query1.insert(tk.END, "\n" + "*"*30 + "\n"))
-                    campo_query1.tag_config("verde", foreground="green")
-                    campo_query1.tag_config("vermelho", foreground="red")
-                    campo_query1.tag_config("azul", foreground="blue")
-                    campo_query1.tag_config("preto", foreground="black")
-
-                    if ret:  # XML encontrado via SEFAZ
-                        qtd_itens_validos +=1
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,'🟢 XML ENCONTRADO! 🟢\n','verde'))
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"COO: {chave}\n",'verde'))
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"CHAVE: {nome_arquivo}\n",'verde'))
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"cStat: {ret.get('cStat')}\n",'verde'))
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"Motivo: {ret.get('xMotivo')}\n",'verde'))
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"Protocolo: {ret.get('nProt')}\n",'verde'))
+                    except Exception as erro:
+                        campo_query1.after(0, lambda e=erro: campo_query1.insert(tk.END, f"{str(e)}" + "\n",'branco'))
 
                     else:
-                        arquivo_xml = os.path.join(raiz, nome_arquivo)
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,'⚠️ XML NAO ENCONTRADO! ⚠️\n','vermelho'))
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"COO: {chave}\n",'vermelho'))
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"CHAVE: {nome_arquivo}\n",'vermelho'))
-                        try:
-                            os.remove(arquivo_xml)
-                        except:
-                            campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"OBS: XML NÃO ENCONTRADO DENTRO DA PASTA\n",'azul'))
+                        ret = extrair_prot(response.text)  
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, "\n" + "*"*30 + "\n",'branco'))
+                        if ret:  # XML encontrado via SEFAZ
+                            qtd_itens_validos +=1
+                            campo_query1.after(0, lambda: campo_query1.insert(tk.END,'🟢 XML ENCONTRADO! 🟢\n','verde'))
+                            campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"COO: {chave}\n",'verde'))
+                            campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"CHAVE: {nome_arquivo}\n",'verde'))
+                            campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"cStat: {ret.get('cStat')}\n",'verde'))
+                            campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"Motivo: {ret.get('xMotivo')}\n",'verde'))
+                            campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"Protocolo: {ret.get('nProt')}\n",'verde'))
+                            campo_query1.see(tk.END)
 
-                    time.sleep(1)
-    
+                        else:
+                            arquivo_xml = os.path.join(raiz, nome_arquivo)
+                            campo_query1.after(0, lambda: campo_query1.insert(tk.END,'⚠️ XML NAO ENCONTRADO! ⚠️\n','vermelho'))
+                            campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"COO: {chave}\n",'vermelho'))
+                            campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"CHAVE: {nome_arquivo}\n",'vermelho'))
+                            try:
+                                os.remove(arquivo_xml)
+                            except:
+                                campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"OBS: XML NÃO ENCONTRADO DENTRO DA PASTA\n",'azul'))
+                        campo_query1.see(tk.END)    
 
-    campo_query1.after(0, lambda: campo_query1.insert(tk.END, "\n" + "*"*30 + "\n",'preto'))  
-    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML: {qtd_itens}'+"\n",'preto'))    
-    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML VÁLIDO: {qtd_itens_validos}'+"\n",'preto'))    
-    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML INVÁLIDO: {qtd_itens - qtd_itens_validos}'+"\n",'preto'))    
+                    time.sleep(2)
 
+    campo_query1.after(0, lambda: campo_query1.insert(tk.END, "\n" + "*"*30 + "\n",'branco'))  
+    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML: {qtd_itens}'+"\n",'branco'))    
+    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML VÁLIDO: {qtd_itens_validos}'+"\n",'branco'))    
+    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML INVÁLIDO: {qtd_itens - qtd_itens_validos}'+"\n",'branco')) 
+    campo_query1.see(tk.END)  
+    botao_validar_xml.config(state="normal")
+    botao_voltar.config(state="normal")
+    campo_query1.config(state="disabled")
 
        
 def janela_nova():
-    global janela2
-    global campo_query1
+    global janela2, campo_query1,botao_validar_xml,botao_voltar,caminho_certificado
     janela_principal.withdraw()
     janela2 = tk.Toplevel()
-    janela2.title("BDX 1.9")
+    janela2.title("BDX 2.0")
     janela2.geometry("1000x800")
+    frame_campos = tk.Frame(janela2,bg=COR_FUNDO)
+    frame_campos.pack(pady=10)
+    frame_botoes = tk.Frame(janela2,bg=COR_FUNDO)
+    frame_botoes.pack(pady=10)
+    janela2.configure(bg=COR_FUNDO)
+    scroll = tk.Scrollbar(janela2)
+    scroll.pack(side="right", fill="y")
+    
+    tk.Label(frame_campos, text="Caminho do XML:",fg=COR_TEXTO,width=20, anchor="e",bg=COR_FUNDO).grid(row=0,column=0,padx=5)
+    caminho_xml = tk.Entry(frame_campos, width=60,bg=COR_TEXTO)
+    caminho_xml.grid(row=0, column=1, padx=5)
+    botao_caminho_xml = tk.Button(frame_campos, bg=COR_BOTAO,fg=COR_TEXTO, text="📁", command=lambda: selecionar_pasta(caminho_xml), padx=3, pady=3)
+    botao_caminho_xml.grid(row=0, column=2)
 
-    label_pasta = tk.Label(janela2, text="Caminho do XML:")
-    label_pasta.pack(pady=5)
-    entry_pasta = tk.Entry(janela2, width=50)
-    entry_pasta.pack(pady=5) 
+    tk.Label(frame_campos, text="Caminho do certificado:",fg=COR_TEXTO,bg=COR_FUNDO).grid(row=1, column=0, padx=5)
+    caminho_certificado = tk.Entry(frame_campos, width=60,bg=COR_TEXTO)
+    caminho_certificado.grid(row=1, column=1, padx=5)
+    botao_caminho_certificado = tk.Button(frame_campos, bg=COR_BOTAO,fg=COR_TEXTO, text="📁", command=lambda: selecionar_arquivo(caminho_certificado), padx=3, pady=3)
+    botao_caminho_certificado.grid(row=1, column=2)
 
-    label_pasta1 = tk.Label(janela2, text="Caminho do certificado:")
-    label_pasta1.pack(pady=5)
-    entry_pasta1 = tk.Entry(janela2, width=50)
-    entry_pasta1.pack(pady=5) 
+    tk.Label(frame_campos, text="Senha do certificado:",fg=COR_TEXTO,bg=COR_FUNDO).grid(row=2, column=0, padx=5)
+    senha = tk.Entry(frame_campos, width=60, show='*')
+    senha.grid(row=2, column=1, padx=5)
 
-    label_pasta2 = tk.Label(janela2, text="Senha do certificado:")
-    label_pasta2.pack(pady=5)
-    entry_pasta2 = tk.Entry(janela2, width=50)
-    entry_pasta2.pack(pady=5) 
+    botao_validar_xml = tk.Button(frame_botoes,bg=COR_BOTAO,fg=COR_TEXTO, text="Validar xml", command=lambda: validar_xml_thread(caminho_xml.get(),caminho_certificado.get(),senha.get()), padx=10, pady=10)
+    botao_validar_xml.grid(row=0, column=0,padx=10)
 
-    botao5 = tk.Button(janela2, text="Validação de xml", command=lambda: validar_xml_thread(entry_pasta.get(),entry_pasta1.get(),entry_pasta2.get()), padx=20, pady=20,fg='white',bg='green')
-    botao5.pack(pady=5)    
-    botao6 = tk.Button(janela2, text="Voltar", command= voltar, padx=20, pady=20,fg='white',bg='blue')
-    botao6.pack(pady=5)   
+    botao_voltar = tk.Button(frame_botoes,bg=COR_BOTAO,fg=COR_TEXTO, text="Voltar", command= voltar, padx=10, pady=10)
+    botao_voltar.grid(row=0,column=1,padx=10)
+    
 
-    campo_query1 = tk.Text(janela2, width=130, height=100,bg="lightblue",fg="white")
-    campo_query1.pack(pady=5,side='bottom')
+    campo_query1 = tk.Text(janela2, width=130, height=100,bg=COR_FRAME,yscrollcommand=scroll.set)
+    campo_query1.pack(pady=5,side='bottom',fill="both",expand=True)
+    scroll.config(command=campo_query1.yview)
+    campo_query1.tag_config("verde", foreground="green")
+    campo_query1.tag_config("vermelho", foreground="red")
+    campo_query1.tag_config("azul", foreground="blue")
+    campo_query1.tag_config("branco", foreground=COR_TEXTO)
+    campo_query1.config(state="disabled")
+
+   
+def selecionar_pasta(label):
+    pasta = filedialog.askdirectory()
+    if pasta:
+        label.delete(0,tk.END)
+        label.insert(0,pasta)
+
+
+def selecionar_arquivo(label):
+    pasta = filedialog.askopenfilename()
+    if pasta:
+        label.delete(0,tk.END)
+        label.insert(0,pasta)
 
 
 def validar_xml_thread(pasta,certificado,senha):
