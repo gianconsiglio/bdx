@@ -102,7 +102,7 @@ def extrair_prot(xml_retorno):
 def janela():
     global campo_query, janela_principal
     janela_principal = tk.Tk()
-    janela_principal.title("BDX 2.0")  # Título da janela
+    janela_principal.title("BDX 2.1")  # Título da janela
     janela_principal.geometry("600x600")  # Largura x Altura
     janela_principal.configure(bg=COR_FUNDO)
     
@@ -130,9 +130,8 @@ def buscar_xml_por_chave():
         chaves = []
         with open(arquivo_lista, "r", encoding="utf-8") as f:
           for linha in f:
-              linha = linha.strip()
-              linha = linha.lower()
-              chaves.append(linha.lower())  
+              linha = linha.strip().lower()
+              chaves.append(linha)  
         encontrados = set()
         # Percorre a pasta e subpastas
         for raiz, dirs, arquivos in os.walk(pasta_origem):
@@ -152,9 +151,11 @@ def buscar_xml_por_chave():
         # Mostra os que não foram encontrados
         nao_encontrados = [c for c in chaves if c not in encontrados]
         if nao_encontrados:
-            campo_query.insert(tk.END,"\n⚠️ Arquivos não encontrados:\n")
-            for c in nao_encontrados:
-                campo_query.insert(tk.END,f"{c}\n")
+            campo_query.insert(tk.END,"\n⚠️ Arquivos não encontrados:\n")     
+            with open("chaves_nao_encontradas.txt", "w") as arquivo:
+                    for c in nao_encontrados:
+                        arquivo.write(f"{c}\n")                
+                        campo_query.insert(tk.END,f"{c}\n")
         else:
             campo_query.insert(tk.END,"\n🟢 Todos os arquivos foram encontrados e copiados!")
 
@@ -175,9 +176,8 @@ def buscar_xml_por_coo():
         campo_query.delete("1.0",tk.END)
         with open(arquivo_lista, "r", encoding="utf-8") as f:
           for linha in f:
-              linha = linha.strip()
-              linha = linha.lower()
-              chaves.append(linha.lower())  
+              linha = linha.strip().lower()
+              chaves.append(linha)  
         encontrados = set()
         for raiz, dirs, arquivos in os.walk(pasta_origem):
             for nome_arquivo in arquivos:
@@ -201,8 +201,10 @@ def buscar_xml_por_coo():
         nao_encontrados = [c for c in chaves if c not in encontrados]
         if nao_encontrados:
             campo_query.insert(tk.END,"\n⚠️ Arquivos não encontrados:\n")
-            for c in nao_encontrados:
-                campo_query.insert(tk.END,f"{c}\n")
+            with open("coos_nao_encontrados.txt", "w") as arquivo:
+                for c in nao_encontrados:
+                    arquivo.write(f"{c}\n")     
+                    campo_query.insert(tk.END,f"{c}\n")
         else:
             campo_query.insert(tk.END,"\n🟢 Todos os arquivos foram encontrados e copiados!")
             
@@ -223,6 +225,10 @@ def validar_xml(pasta,certificado,senha):
         return
 
     else:
+        green = set()
+        red = set()
+        green1 = set()
+        red1 = set()
         certificado = str(certificado).strip()
         senha = str(senha).strip()
         CERT_FILE, KEY_FILE = load_pfx(certificado, senha)
@@ -237,63 +243,120 @@ def validar_xml(pasta,certificado,senha):
     for raiz, dirs, arquivos in os.walk(pasta):
             for nome_arquivo in arquivos:
                 if nome_arquivo.endswith('-nfe.xml'):
+                    arquivo_xml = os.path.join(raiz, nome_arquivo)
                     qtd_itens+=1
                     chave = nome_arquivo[25:34].lstrip("0")
-                    chave_modificada = nome_arquivo.removesuffix('-nfe.xml')
-                    xml_nfe = limpar(xml_consulta(chave_modificada))
-                    soap_xml = montar_soap(xml_nfe)
-                    url = "https://nfce.fazenda.sp.gov.br/ws/NFeConsultaProtocolo4.asmx"
-                    headers = {"Content-Type": "application/soap+xml; charset=utf-8"}
-                    
-
-                    try:
-                        response = requests.post(
-                        url, data=soap_xml.encode("utf-8"), headers=headers, cert=(CERT_FILE, KEY_FILE), verify=False, timeout=(5,15))
-
-                    except Exception as erro:
-                        campo_query1.after(0, lambda e=erro: campo_query1.insert(tk.END, f"{str(e)}" + "\n",'branco'))
-
+                    if chave in green:
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"\n"))
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"***CHAVE JÁ VALIDADA***: {nome_arquivo}",'amarelo'))
+                        campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"\n"))
+                        os.remove(arquivo_xml)
+                        red.discard(chave)
+                        red1.discard(nome_arquivo)
+                        continue
                     else:
-                        ret = extrair_prot(response.text)  
-                        campo_query1.after(0, lambda: campo_query1.insert(tk.END, "\n" + "*"*30 + "\n",'branco'))
-                        if ret:  # XML encontrado via SEFAZ
-                            qtd_itens_validos +=1
-                            campo_query1.after(0, lambda: campo_query1.insert(tk.END,'🟢 XML ENCONTRADO! 🟢\n','verde'))
-                            campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"COO: {chave}\n",'verde'))
-                            campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"CHAVE: {nome_arquivo}\n",'verde'))
-                            campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"cStat: {ret.get('cStat')}\n",'verde'))
-                            campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"Motivo: {ret.get('xMotivo')}\n",'verde'))
-                            campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"Protocolo: {ret.get('nProt')}\n",'verde'))
-                            campo_query1.see(tk.END)
+                        chave_modificada = nome_arquivo.removesuffix('-nfe.xml')
+                        xml_nfe = limpar(xml_consulta(chave_modificada))
+                        soap_xml = montar_soap(xml_nfe)
+                        url = "https://nfce.fazenda.sp.gov.br/ws/NFeConsultaProtocolo4.asmx"
+                        headers = {"Content-Type": "application/soap+xml; charset=utf-8"}
+                        try:
+                            response = requests.post(url, data=soap_xml.encode("utf-8"), headers=headers, cert=(CERT_FILE, KEY_FILE), verify=False, timeout=(5,15))
+
+                        except Exception as erro:
+                            campo_query1.after(0, lambda e=erro: campo_query1.insert(tk.END, f"NÚMERO DA CHAVE: {chave} {str(e)}" + "\n",'branco'))
 
                         else:
-                            arquivo_xml = os.path.join(raiz, nome_arquivo)
-                            campo_query1.after(0, lambda: campo_query1.insert(tk.END,'⚠️ XML NAO ENCONTRADO! ⚠️\n','vermelho'))
-                            campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"COO: {chave}\n",'vermelho'))
-                            campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"CHAVE: {nome_arquivo}\n",'vermelho'))
-                            try:
-                                os.remove(arquivo_xml)
-                            except:
-                                campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"OBS: XML NÃO ENCONTRADO DENTRO DA PASTA\n",'azul'))
-                        campo_query1.see(tk.END)    
+                            ret = extrair_prot(response.text)  
+                            campo_query1.after(0, lambda: campo_query1.insert(tk.END, "\n" + "*"*30 + "\n",'branco'))
+                            if ret:  # XML encontrado via SEFAZ
+                                qtd_itens_validos +=1
+                                campo_query1.after(0, lambda: campo_query1.insert(tk.END,'🟢 XML ENCONTRADO! 🟢\n','verde'))
+                                campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"COO: {chave}\n",'verde'))
+                                campo_query1.after(0, lambda: campo_query1.insert(tk.END,f"CHAVE: {nome_arquivo}\n",'verde'))
+                                campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"cStat: {ret.get('cStat')}\n",'verde'))
+                                campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"Motivo: {ret.get('xMotivo')}\n",'verde'))
+                                campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"Protocolo: {ret.get('nProt')}\n",'verde'))
+                                campo_query1.see(tk.END)
+                                green.add(chave)
+                                red.discard(chave)
+                                red1.discard(nome_arquivo)
+                                green1.add(nome_arquivo)
 
+                            else:  
+                                if chave not in green:
+                                    red.add(chave)
+                                if chave not in green1:
+                                    red1.add(nome_arquivo)    
+                                arquivo_xml = os.path.join(raiz, nome_arquivo)
+                                campo_query1.after(0, lambda: campo_query1.insert(tk.END,'⚠️ XML NAO ENCONTRADO! ⚠️\n','vermelho'))
+                                campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"COO: {chave}\n",'vermelho'))
+                                campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"CHAVE: {nome_arquivo}\n",'vermelho'))
+                                try:
+                                    os.remove(arquivo_xml)
+                                except:
+                                    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f"OBS: XML NÃO ENCONTRADO DENTRO DA PASTA\n",'azul'))
+                    
+                    campo_query1.see(tk.END)    
                     time.sleep(2)
 
     campo_query1.after(0, lambda: campo_query1.insert(tk.END, "\n" + "*"*30 + "\n",'branco'))  
-    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML: {qtd_itens}'+"\n",'branco'))    
-    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML VÁLIDO: {qtd_itens_validos}'+"\n",'branco'))    
-    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML INVÁLIDO: {qtd_itens - qtd_itens_validos}'+"\n",'branco')) 
-    campo_query1.see(tk.END)  
+    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML NA PASTA SELECIONADA: {qtd_itens}'+"\n",'branco'))    
+    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML VÁLIDO NA SEFAZ: {qtd_itens_validos}'+"\n",'branco'))    
+    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'QUANTIDADE DE XML INVÁLIDO NA SEFAZ: {qtd_itens - qtd_itens_validos}'+"\n",'branco')) 
+    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'LISTA DOS VÁLIDADOS: {green}\n'))
+    campo_query1.after(0, lambda: campo_query1.insert(tk.END, f'LISTA DOS NÃO VÁLIDADOS: {red}\n'))
+    campo_query1.see(tk.END) 
     botao_validar_xml.config(state="normal")
     botao_voltar.config(state="normal")
     campo_query1.config(state="disabled")
+    retorno = []
+    retorno2 = []
+    try:
+        with open("coos_nao_encontrados.txt", "w", encoding="utf-8") as arquivo:
+            for x in red:
+                arquivo.write(f"{x}\n")
 
-       
+        arquivo_lista = "coos_nao_encontrados.txt"  # corrigido: com extensão
+        with open(arquivo_lista, "r", encoding="utf-8") as f:
+            for linha in f:
+                linha = linha.strip().lower()
+                retorno.append(linha)
+
+        retorno.sort()
+        with open("coos_nao_encontrados.txt", "w", encoding="utf-8") as arquivo:
+            for x in retorno:
+                arquivo.write(f"{x}\n")
+
+    except:
+        campo_query1.after(0, lambda: campo_query1.insert(tk.END, 'Falha na leitura de coos_nao_encontrados.txt!'))
+
+
+    try:
+        with open("chaves_nao_encontradas.txt", "w", encoding="utf-8") as arquivo:
+            for x in red1:
+                arquivo.write(f"{x}\n")
+
+        arquivo_lista = "chaves_nao_encontradas.txt"  # corrigido: com extensão
+        with open(arquivo_lista, "r", encoding="utf-8") as f:
+            for linha in f:
+                linha = linha.strip().lower()
+                retorno2.append(linha)
+
+
+        with open("chaves_nao_encontradas.txt", "w", encoding="utf-8") as arquivo:
+            for x in retorno2:
+                arquivo.write(f"{x}\n")
+
+    except:
+        campo_query1.after(0, lambda: campo_query1.insert(tk.END, 'Falha na leitura de chaves_nao_encontradas.txt!'))    
+
+
 def janela_nova():
     global janela2, campo_query1,botao_validar_xml,botao_voltar,caminho_certificado
     janela_principal.withdraw()
     janela2 = tk.Toplevel()
-    janela2.title("BDX 2.0")
+    janela2.title("BDX 2.1")
     janela2.geometry("1000x800")
     frame_campos = tk.Frame(janela2,bg=COR_FUNDO)
     frame_campos.pack(pady=10)
@@ -332,6 +395,7 @@ def janela_nova():
     campo_query1.tag_config("verde", foreground="green")
     campo_query1.tag_config("vermelho", foreground="red")
     campo_query1.tag_config("azul", foreground="blue")
+    campo_query1.tag_config("amarelo", foreground="yellow")
     campo_query1.tag_config("branco", foreground=COR_TEXTO)
     campo_query1.config(state="disabled")
 
